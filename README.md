@@ -11,4 +11,12 @@ python diagnose_gpu.py
 ```
 
 The tool attempts to execute `nvidia-smi` and reports any errors that may
-indicate issues with your NVIDIA drivers.
+indicate issues with your NVIDIA drivers. You can also provide a game
+executable to check for crashes:
+
+```
+python diagnose_gpu.py --game /path/to/game_executable [arguments]
+```
+
+If the game exits with a non-zero code, the script reports the captured output
+so you can diagnose the crash reason.
