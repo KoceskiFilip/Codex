@@ -13,7 +13,7 @@ def run_cmd(cmd):
 
 
 def check_nvidia_smi():
-    output = run_cmd(["nvidia-smi"]) 
+    output = run_cmd(["nvidia-smi"])
     if output is None:
         print("nvidia-smi not found. NVIDIA drivers may not be installed or PATH is incorrect.")
         return False
