@@ -1,24 +1,19 @@
-# Codex
+# GPU Diagnostics
 
-This repository provides a simple GPU driver diagnostic script.
+This repository contains a small Python script to help troubleshoot NVIDIA driver issues.
+
+The tool checks for an NVIDIA GPU, runs `nvidia-smi`, and prints suggestions when errors are detected. You can also provide a command (such as a game executable) to see if it crashes after the driver check.
 
 ## Usage
 
-Run the script using Python:
-
-```
+```bash
 python diagnose_gpu.py
 ```
 
-The tool attempts to execute `nvidia-smi` and reports any errors that may
-indicate issues with your NVIDIA drivers. It first checks for an NVIDIA GPU
-using `lspci` when available and then analyzes common failure messages from
-`nvidia-smi` to help you diagnose driver installation problems. You can also
-provide a game executable to check for crashes:
+To run a command after verifying the drivers:
 
-```
-python diagnose_gpu.py --game /path/to/game_executable [arguments]
+```bash
+python diagnose_gpu.py --game /path/to/game [arguments]
 ```
 
-If the game exits with a non-zero code, the script reports the captured output
-so you can diagnose the crash reason.
+If the command exits with an error, the script prints the captured output so you can inspect the reason.

@@ -1,10 +1,14 @@
+#!/usr/bin/env python3
+"""Simple tool to diagnose NVIDIA driver issues."""
+
+import argparse
+import shutil
 import subprocess
 import sys
-import shutil
-from argparse import ArgumentParser
 
 
-def run_cmd(cmd):
+def run_command(cmd):
+    """Run a command and return its output or None if not found."""
     try:
         return subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
     except FileNotFoundError:
@@ -14,82 +18,85 @@ def run_cmd(cmd):
 
 
 def detect_nvidia_gpu():
-    """Check if an NVIDIA GPU is present using lspci when available."""
+    """Detect an NVIDIA GPU using lspci when available."""
     if shutil.which("lspci") is None:
-        print("lspci not found. Skipping GPU detection step.")
+        print("lspci not found; skipping GPU detection.")
         return True
-    output = run_cmd(["lspci"])
+    output = run_command(["lspci"])
     if output and "NVIDIA" in output:
         return True
-    print("No NVIDIA GPU detected.\n" + (output or ""))
+    print("No NVIDIA GPU detected.")
+    if output:
+        print(output)
     return False
 
 
-def analyze_smi_output(output: str):
-    """Print additional advice based on nvidia-smi failure output."""
-    low = output.lower()
-    if "driver/library version mismatch" in low:
-        print("Driver/library version mismatch detected. Ensure the kernel and user-space drivers match.")
-    if "failed to initialize nvml" in low:
-        print("Failed to initialize NVML. The NVIDIA kernel module may not be loaded.")
-    if "couldn't communicate with the nvidia driver" in low:
-        print("nvidia-smi could not communicate with the driver. Verify it is installed and running.")
+def analyze_smi_errors(output):
+    """Provide hints based on common nvidia-smi error messages."""
+    text = output.lower()
+    if "driver/library version mismatch" in text:
+        print("Driver/library version mismatch detected. Reinstall or reboot.")
+    if "failed to initialize nvml" in text:
+        print("Failed to initialize NVML. The kernel module may not be loaded.")
+    if "could not communicate with the nvidia driver" in text:
+        print("Could not communicate with the NVIDIA driver. Is it running?")
 
 
 def check_nvidia_smi():
+    """Run nvidia-smi and report whether it succeeds."""
     if not detect_nvidia_gpu():
         return False
-    output = run_cmd(["nvidia-smi"])
+
+    output = run_command(["nvidia-smi"])
     if output is None:
-        print("nvidia-smi not found. NVIDIA drivers may not be installed or PATH is incorrect.")
+        print("nvidia-smi not found. NVIDIA drivers might not be installed.")
         return False
-    if "failed" in output.lower() or "error" in output.lower():
-        print("nvidia-smi reported an error:\n" + output)
-        analyze_smi_output(output)
+
+    print("nvidia-smi output:")
+    print(output)
+
+    if "error" in output.lower() or "failed" in output.lower():
+        analyze_smi_errors(output)
         return False
-    print("nvidia-smi output:\n" + output)
+
     return True
 
 
 def run_game(cmd):
-    print(f"Launching game: {' '.join(cmd)}")
+    """Run a command (e.g., a game) and report crashes."""
+    print("Running:", " ".join(cmd))
     try:
         completed = subprocess.run(cmd, capture_output=True, text=True)
     except FileNotFoundError:
-        print("Game executable not found.")
+        print("Executable not found.")
         return False
 
     if completed.returncode != 0:
-        print(f"Game exited with code {completed.returncode}.")
+        print(f"Process exited with code {completed.returncode}.")
         output = (completed.stdout + "\n" + completed.stderr).strip()
         if output:
-            print("Game output:\n" + output)
-        else:
-            print("No game output captured.")
+            print(output)
         return False
 
-    print("Game exited successfully.")
+    print("Process exited successfully.")
     return True
 
 
 def main():
-    parser = ArgumentParser(description="GPU diagnostic and game crash checker")
-    parser.add_argument('--game', nargs='+', help='Command to launch the game')
+    parser = argparse.ArgumentParser(description="Diagnose NVIDIA GPU drivers")
+    parser.add_argument("--game", nargs="+", help="Command to run after checks")
     args = parser.parse_args()
 
-    success = check_nvidia_smi()
-    if not success:
-        print("Could not get GPU information. Check that your NVIDIA drivers are properly installed.")
+    ok = check_nvidia_smi()
+    if not ok:
         sys.exit(1)
-    print("GPU drivers appear to be accessible. Review the above output for details.")
 
     if args.game:
         print()
-        game_ok = run_game(args.game)
-        if not game_ok:
+        if not run_game(args.game):
             sys.exit(1)
     else:
-        print("No game command provided. Skipping crash check.")
+        print("No game command provided.")
 
 
 if __name__ == "__main__":
